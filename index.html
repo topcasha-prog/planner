@@ -3,259 +3,404 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Планировщик задач</title>
+<title>Планировщик целей</title>
 <style>
-:root{--bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--text:#e6e8ee;--muted:#8b93a7;--accent:#7c9cff;--warn:#fbbf24;--border:#262b36}
+:root{--bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--text:#e6e8ee;--muted:#8b93a7;--accent:#7c9cff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--border:#262b36}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.4}
-.wrap{max-width:1200px;margin:0 auto;padding:20px}
-h1{font-size:20px;margin:0 0 20px;font-weight:600}
-h2{font-size:13px;margin:0 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
-.tab{padding:10px 16px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;border-bottom:2px solid transparent;margin-bottom:-1px}
-.tab.active{color:var(--text);border-bottom-color:var(--accent)}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
-.form{display:grid;grid-template-columns:1fr auto auto auto auto;gap:8px}
-input,select,button{font-family:inherit;font-size:14px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px}
-input:focus,select:focus{outline:none;border-color:var(--accent)}
-button{cursor:pointer}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;height:100vh;overflow:hidden}
+.app{display:grid;grid-template-columns:1fr 1fr;height:100vh}
+.side{border-right:1px solid var(--border);overflow-y:auto;padding:14px;display:flex;flex-direction:column}
+.chat-wrap{display:flex;flex-direction:column;height:100vh}
+.chat{flex:1;overflow-y:auto;padding:16px}
+.input-row{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px}
+.input-row textarea{flex:1;resize:none;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;height:70px}
+button{font-family:inherit;font-size:14px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--accent)}
 button.primary{background:var(--accent);color:#0f1115;border-color:var(--accent);font-weight:600}
-.task{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2);border-radius:6px;margin-bottom:6px;border-left:3px solid transparent}
-.task.big{border-left-color:var(--accent)}
-.task.routine{border-left-color:var(--warn)}
-.task.done{opacity:.4;text-decoration:line-through}
-.task .title{flex:1}
-.task .meta{color:var(--muted);font-size:12px;display:flex;gap:6px;flex-wrap:wrap}
-.badge{padding:2px 6px;background:var(--panel);border-radius:4px;font-size:11px}
-.badge.score{background:#2a3a5c;color:#a8c0ff}
-.badge.imp{background:#3d2a3a;color:#f0a0d0}
-.week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-.day{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px;min-height:200px}
-.day.today{border-color:var(--accent)}
-.day h3{font-size:12px;margin:0 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase}
-.day .task{padding:6px 8px;font-size:13px;margin-bottom:4px}
-.icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 6px;font-size:13px;border-radius:4px}
-.icon-btn:hover{color:var(--text);background:var(--panel)}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.empty{color:var(--muted);font-style:italic;padding:10px 0;font-size:13px}
-.stat{color:var(--muted);font-size:12px}
-@media(max-width:800px){.week{grid-template-columns:1fr 1fr}.form{grid-template-columns:1fr}}
+button.tiny{padding:2px 8px;font-size:12px}
+h1{font-size:15px;margin:0 0 12px;font-weight:600}
+h2{font-size:12px;margin:0 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.tabs{display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{padding:8px 12px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.goal{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px}
+.goal-title{font-weight:600;font-size:14px;margin-bottom:4px}
+.goal-meta{color:var(--muted);font-size:12px;margin-bottom:8px}
+.bar{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.bar-fill{height:100%;background:var(--accent);transition:width .3s}
+.bar-fill.warn{background:var(--warn)}
+.bar-fill.bad{background:var(--bad)}
+.week{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px}
+.week.now{border-color:var(--accent);background:#1a2030}
+.week-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.week-head b{color:var(--text)}
+.task{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:13px}
+.task input{margin-top:3px}
+.task.done .task-title{text-decoration:line-through;opacity:.5}
+.task-title{flex:1}
+.tag{font-size:11px;color:var(--muted);padding:1px 5px;background:var(--panel2);border-radius:3px}
+.tag.S{color:#4ade80}.tag.M{color:#fbbf24}.tag.L{color:#f87171}
+.tag.overdue{color:var(--bad);background:#3a1a1a}
+.msg{margin-bottom:14px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+.msg.user{background:var(--panel2);padding:10px 12px;border-radius:8px;margin-left:40px}
+.msg .role{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.empty{color:var(--muted);font-style:italic;font-size:13px;padding:20px;text-align:center}
+.settings{margin-bottom:12px;padding:8px;background:var(--panel);border-radius:6px;font-size:11px;flex-shrink:0}
+.settings input,.settings select{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:5px;margin-top:4px;font-size:11px}
+.settings summary{cursor:pointer;color:var(--muted);user-select:none;padding:2px 0}
+.report{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;font-size:13px}
+.report-head{display:flex;justify-content:space-between;margin-bottom:6px}
+.score{font-weight:700;font-size:16px}
+.score.good{color:var(--ok)}.score.mid{color:var(--warn)}.score.bad{color:var(--bad)}
+.summary{color:var(--muted);font-size:12px;margin-top:6px;white-space:pre-wrap}
+.report-btn{width:100%;margin-bottom:10px}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{max-height:50vh}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>📋 Планировщик задач</h1>
-  <div class="tabs">
-    <button class="tab" data-tab="today">Сегодня</button>
-    <button class="tab active" data-tab="week">Неделя</button>
-    <button class="tab" data-tab="pool">Все задачи</button>
-    <button class="tab" data-tab="routines">Рутины</button>
+<div class="app">
+  <aside class="side">
+    <h1>🎯 План</h1>
+    <details class="settings">
+      <summary>⚙️ Настройки API</summary>
+      <input id="apiKey" type="password" placeholder="sk-...">
+      <select id="provider">
+        <option value="openrouter">OpenRouter (бесплатные модели)</option>
+        <option value="deepseek">DeepSeek (платно, копейки)</option>
+        <option value="openai">OpenAI</option>
+      </select>
+      <select id="model"></select>
+    </details>
+    <div class="tabs">
+      <button class="tab active" data-tab="goals">Цели</button>
+      <button class="tab" data-tab="plan">План</button>
+      <button class="tab" data-tab="reports">Отчёты</button>
+    </div>
+    <div id="content"></div>
+  </aside>
+  <div class="chat-wrap">
+    <div class="chat" id="chat"></div>
+    <div class="input-row">
+      <textarea id="userInput" placeholder="Например: добавь цель — ремонт до 31 января, или: составь отчёт за неделю, или: добавь врача-дерматолога до 20 ноября (Ctrl+Enter)"></textarea>
+      <button class="primary" onclick="send()">→</button>
+    </div>
   </div>
-  <div id="content"></div>
 </div>
 <script>
-const DAYS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-const EFFORT_LABEL={S:'15м',M:'1ч',L:'3ч+'};
-let state=load()||{tasks:[],tab:'week'};
+const MODELS = {
+  openrouter: ['meta-llama/llama-3.3-70b-instruct:free','deepseek/deepseek-chat-v3.1:free','google/gemini-2.0-flash-exp:free','qwen/qwen-2.5-72b-instruct:free'],
+  deepseek: ['deepseek-chat','deepseek-reasoner'],
+  openai: ['gpt-4o-mini','gpt-4o']
+};
+const ENDPOINTS = {
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+  deepseek: 'https://api.deepseek.com/chat/completions',
+  openai: 'https://api.openai.com/v1/chat/completions'
+};
+const EFFORT_HOURS = {S:2, M:6, L:20};
 
-function load(){try{return JSON.parse(localStorage.getItem('planner_v1'))}catch(e){return null}}
-function save(){localStorage.setItem('planner_v1',JSON.stringify(state))}
-function uid(){return Math.random().toString(36).slice(2,10)}
-function todayIdx(){const d=new Date().getDay();return d===0?6:d-1}
-function todayStr(){return new Date().toISOString().slice(0,10)}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+let state = load() || {
+  goals: [], reports: [], messages: [],
+  apiKey: '', provider: 'openrouter', model: MODELS.openrouter[0],
+  tab: 'goals'
+};
 
-function score(t){
-  const ageDays=Math.floor((Date.now()-t.created)/86400000);
-  const aging=ageDays+t.postponed*2;
-  const typeBonus=t.type==='big'?6:0;
-  const effortPen=t.effort==='L'?2:t.effort==='M'?1:0;
-  return Math.max(0,t.importance*3+aging+typeBonus-effortPen);
+function load(){ try{return JSON.parse(localStorage.getItem('goals_v2'))}catch(e){return null} }
+function save(){ localStorage.setItem('goals_v2', JSON.stringify(state)) }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
+function uid(){ return Math.random().toString(36).slice(2,9) }
+
+// date helpers
+function startOfWeek(d){
+  const x = new Date(d); const day = x.getDay();
+  const diff = day===0 ? -6 : 1-day;
+  x.setDate(x.getDate()+diff); x.setHours(0,0,0,0); return x;
+}
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function fmtShort(d){ return d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}); }
+function fmtISO(d){ return d.toISOString().slice(0,10); }
+function todayISO(){ return fmtISO(new Date()); }
+function daysBetween(a,b){ return Math.round((b-a)/(24*3600*1000)); }
+
+function currentWeekIndex(){
+  // week 0 = текущая неделя
+  return 0;
 }
 
-function addTask(title,importance,effort,type){
-  state.tasks.push({id:uid(),title,importance,effort,type,created:Date.now(),postponed:0,done:false,day:null,lastDoneDate:null});
-  save();render();
+function weekRange(wIdx){
+  const s = addDays(startOfWeek(new Date()), wIdx*7);
+  return {start: s, end: addDays(s,6)};
 }
-function deleteTask(id){state.tasks=state.tasks.filter(t=>t.id!==id);save();render()}
-function toggleDone(id){
-  const t=state.tasks.find(x=>x.id===id);if(!t)return;
-  if(t.type==='routine'){t.lastDoneDate=t.lastDoneDate===todayStr()?null:todayStr()}
-  else{t.done=!t.done;if(t.done)t.day=null}
-  save();render();
+function weekLabel(wIdx){
+  const {start,end} = weekRange(wIdx);
+  const y = start.getFullYear();
+  return `${fmtShort(start)} – ${fmtShort(end)} ${y}`;
 }
-function postpone(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;t.postponed++;t.day=null;save();render()}
-function assignDay(id,day){const t=state.tasks.find(x=>x.id===id);if(!t)return;t.day=day;save();render()}
-function unassign(id){const t=state.tasks.find(x=>x.id===id);if(t){t.day=null;save();render()}}
+function weekOffsetForDate(iso){
+  const d = new Date(iso); if(isNaN(d)) return null;
+  const diff = daysBetween(startOfWeek(new Date()), startOfWeek(d));
+  return Math.round(diff/7);
+}
 
-function autoPlan(){
-  const pool=state.tasks.filter(t=>!t.done&&t.type!=='routine'&&t.day===null);
-  pool.sort((a,b)=>score(b)-score(a));
-  const load=[0,0,0,0,0,0,0],bigPerDay=[0,0,0,0,0,0,0];
-  state.tasks.forEach(t=>{if(t.day!==null&&!t.done){load[t.day]++;if(t.type==='big')bigPerDay[t.day]++}});
-  for(const t of pool){
-    if(t.type!=='big')continue;
-    for(const d of [0,1,2,3,4,5,6]){
-      if(bigPerDay[d]===0&&load[d]<4){t.day=d;load[d]++;bigPerDay[d]++;break}
-    }
+function allTasks(){
+  const out = [];
+  state.goals.forEach(g => (g.tasks||[]).forEach(t => out.push({...t, goalId:g.id, goalTitle:g.title})));
+  return out;
+}
+function goalProgress(g){
+  const tasks = g.tasks||[];
+  if(!tasks.length) return 0;
+  const done = tasks.filter(t=>t.done).length;
+  return Math.round(done/tasks.length*100);
+}
+
+// ====== RENDER ======
+function render(){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===state.tab));
+  const c = document.getElementById('content');
+  if(state.tab==='goals') c.innerHTML = renderGoals();
+  else if(state.tab==='plan') c.innerHTML = renderPlan();
+  else c.innerHTML = renderReports();
+  renderChat();
+}
+
+function renderGoals(){
+  if(!state.goals.length){
+    return '<div class="empty">Пока целей нет. Опиши их в чате — например:<br><br>"Хочу к новому году: бизнес 70к/мес, диспансеризацию и ремонт. Сегодня 16 октября."</div>';
   }
-  for(const t of pool){
-    if(t.day!==null)continue;
-    const order=[0,1,2,3,4,5,6].sort((a,b)=>load[a]-load[b]||a-b);
-    for(const d of order){if(load[d]<4){t.day=d;load[d]++;break}}
-  }
-  save();render();
-}
-function clearPlan(){state.tasks.forEach(t=>{if(!t.done)t.day=null});save();render()}
-
-function taskHtmlToday(t){
-  return `<div class="task ${t.type}">
-    <input type="checkbox" onchange="toggleDone('${t.id}')">
-    <span class="title">${esc(t.title)}</span>
-    <span class="meta">
-      <span class="badge imp">★${t.importance}</span>
-      <span class="badge">${EFFORT_LABEL[t.effort]}</span>
-      <span class="badge score">${Math.round(score(t))}</span>
-    </span>
-    <button class="icon-btn" onclick="postpone('${t.id}')" title="Отложить">⏭</button>
-  </div>`;
-}
-function taskHtmlRoutine(t){
-  const done=t.lastDoneDate===todayStr();
-  return `<div class="task routine ${done?'done':''}">
-    <input type="checkbox" ${done?'checked':''} onchange="toggleDone('${t.id}')">
-    <span class="title">${esc(t.title)}</span>
-    <button class="icon-btn" onclick="deleteTask('${t.id}')">🗑</button>
-  </div>`;
-}
-function taskHtmlInDay(t){
-  return `<div class="task ${t.type}">
-    <span class="title">${esc(t.title)}</span>
-    <button class="icon-btn" onclick="unassign('${t.id}')" title="Снять">✕</button>
-  </div>`;
-}
-function taskHtmlPool(t){
-  const dayOpts=DAYS.map((n,i)=>`<option value="${i}" ${t.day===i?'selected':''}>${n}</option>`).join('');
-  return `<div class="task ${t.type}">
-    <span class="title">${esc(t.title)}</span>
-    <span class="meta">
-      <span class="badge imp">★${t.importance}</span>
-      <span class="badge">${EFFORT_LABEL[t.effort]}</span>
-      <span class="badge score">${Math.round(score(t))}</span>
-      ${t.postponed?`<span class="badge">отложено ${t.postponed}×</span>`:''}
-    </span>
-    <select onchange="assignDay('${t.id}',this.value===''?null:+this.value)">
-      <option value="" ${t.day===null?'selected':''}>— день —</option>
-      ${dayOpts}
-    </select>
-    <button class="icon-btn" onclick="postpone('${t.id}')" title="Отложить">⏭</button>
-    <button class="icon-btn" onclick="deleteTask('${t.id}')">🗑</button>
-  </div>`;
-}
-
-function renderToday(){
-  const d=todayIdx();
-  const important=state.tasks.filter(t=>t.day===d&&!t.done&&t.type!=='routine').sort((a,b)=>score(b)-score(a));
-  const routines=state.tasks.filter(t=>t.type==='routine');
-  return `<div class="panel">
-    <h2>Важное на сегодня · ${DAYS[d]}</h2>
-    ${important.length?important.map(taskHtmlToday).join(''):'<div class="empty">Ничего не запланировано. Открой «Неделю» и нажми «Авто-план».</div>'}
-  </div>
-  <div class="panel">
-    <h2>Рутины</h2>
-    ${routines.length?routines.map(taskHtmlRoutine).join(''):'<div class="empty">Рутин нет. Добавь во вкладке «Рутины».</div>'}
-  </div>`;
-}
-function renderWeek(){
-  const tIdx=todayIdx();
-  const days=[0,1,2,3,4,5,6].map(d=>{
-    const tasks=state.tasks.filter(t=>t.day===d&&!t.done&&t.type!=='routine').sort((a,b)=>score(b)-score(a));
-    return `<div class="day ${d===tIdx?'today':''}">
-      <h3>${DAYS[d]}${d===tIdx?' · сегодня':''}</h3>
-      ${tasks.length?tasks.map(taskHtmlInDay).join(''):'<div class="empty" style="font-size:12px">—</div>'}
+  return state.goals.map((g,gi)=>{
+    const pct = goalProgress(g);
+    const totalT = (g.tasks||[]).length;
+    const doneT = (g.tasks||[]).filter(t=>t.done).length;
+    const cls = pct>=70?'':pct>=40?'warn':'bad';
+    const dl = g.deadline ? new Date(g.deadline) : null;
+    const dlStr = dl && !isNaN(dl) ? 'до '+dl.toLocaleDateString('ru-RU',{day:'numeric',month:'long'}) : '';
+    const daysLeft = dl ? daysBetween(new Date(), dl) : null;
+    const leftStr = daysLeft!==null ? (daysLeft>0 ? daysLeft+' дн.' : 'просрочено') : '';
+    return `<div class="goal">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div class="goal-title">${esc(g.title)}</div>
+          <div class="goal-meta">${dlStr}${leftStr?' · '+leftStr:''} · ${doneT}/${totalT} задач</div>
+        </div>
+        <button class="tiny" onclick="deleteGoal(${gi})" title="Удалить">✕</button>
+      </div>
+      <div class="bar"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+      <div style="font-size:12px;color:var(--muted)">${pct}% готово</div>
     </div>`;
   }).join('');
-  return `<div class="panel">
-    <div class="row" style="justify-content:space-between">
-      <span class="stat">Максимум 1 важное дело и 4 задачи в день. Пн–Пт в приоритете.</span>
-      <div class="row">
-        <button class="primary" onclick="autoPlan()">⚡ Авто-план</button>
-        <button onclick="clearPlan()">Очистить план</button>
+}
+
+function renderPlan(){
+  const tasks = allTasks();
+  if(!tasks.length) return '<div class="empty">Плана пока нет — сначала опиши цели в чате.</div>';
+  // group by week
+  const byWeek = {};
+  tasks.forEach(t=>{
+    const w = t.week != null ? t.week : 0;
+    (byWeek[w] = byWeek[w]||[]).push(t);
+  });
+  const weeks = Object.keys(byWeek).map(Number).sort((a,b)=>a-b);
+  return weeks.map(w=>{
+    const {start,end} = weekRange(w);
+    const isNow = w === currentWeekIndex();
+    const isPast = w < currentWeekIndex();
+    const list = byWeek[w].slice().sort((a,b)=>a.done-b.done || (b.impact||0)-(a.impact||0));
+    const hours = list.filter(t=>!t.done).reduce((s,t)=>s+(EFFORT_HOURS[t.effort]||0),0);
+    const doneCount = list.filter(t=>t.done).length;
+    return `<div class="week ${isNow?'now':''}">
+      <div class="week-head">
+        <span>${isNow?'<b>Сейчас · </b>':''}${weekLabel(w)}</span>
+        <span>${doneCount}/${list.length} · ~${hours}ч осталось</span>
       </div>
-    </div>
-  </div>
-  <div class="week">${days}</div>`;
-}
-function renderPool(){
-  const pool=state.tasks.filter(t=>!t.done&&t.type!=='routine').sort((a,b)=>score(b)-score(a));
-  const done=state.tasks.filter(t=>t.done).length;
-  return `<div class="panel">
-    <h2>Добавить задачу</h2>
-    <div class="form">
-      <input id="newTitle" placeholder="Что нужно сделать?">
-      <select id="newImp">
-        <option value="1">★1</option><option value="2">★2</option>
-        <option value="3" selected>★3</option><option value="4">★4</option><option value="5">★5</option>
-      </select>
-      <select id="newEffort">
-        <option value="S">15 мин</option><option value="M" selected>1 час</option><option value="L">3 часа+</option>
-      </select>
-      <select id="newType">
-        <option value="big">Важное</option><option value="small" selected>Мелкое</option><option value="routine">Рутина</option>
-      </select>
-      <button class="primary" onclick="submitNew()">Добавить</button>
-    </div>
-  </div>
-  <div class="panel">
-    <div class="row" style="justify-content:space-between;margin-bottom:12px">
-      <h2 style="margin:0">Очередь · ${pool.length} активных · ${done} выполнено</h2>
-      <button class="primary" onclick="autoPlan()">⚡ Распределить на неделю</button>
-    </div>
-    ${pool.length?pool.map(taskHtmlPool).join(''):'<div class="empty">Список пуст. Добавь первую задачу выше.</div>'}
-  </div>`;
-}
-function renderRoutines(){
-  const routines=state.tasks.filter(t=>t.type==='routine');
-  return `<div class="panel">
-    <h2>Добавить рутину</h2>
-    <div class="form" style="grid-template-columns:1fr auto">
-      <input id="newTitle" placeholder="Например: зарядка, дневник, чтение">
-      <input type="hidden" id="newImp" value="3">
-      <input type="hidden" id="newEffort" value="S">
-      <input type="hidden" id="newType" value="routine">
-      <button class="primary" onclick="submitNew()">Добавить</button>
-    </div>
-  </div>
-  <div class="panel">
-    <h2>Рутины (${routines.length})</h2>
-    ${routines.length?routines.map(taskHtmlRoutine).join(''):'<div class="empty">Добавь привычки — они не занимают слоты важного.</div>'}
-  </div>`;
+      ${list.map(t=>{
+        const overdue = isPast && !t.done;
+        return `<label class="task ${t.done?'done':''}">
+          <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.goalId}','${t.id}')">
+          <span class="task-title">${esc(t.title)}</span>
+          <span class="tag ${t.effort||''}">${t.effort||'?'}</span>
+          ${overdue?'<span class="tag overdue">просрочено</span>':''}
+          <span class="tag" title="${esc(t.goalTitle)}" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.goalTitle.slice(0,12))}</span>
+        </label>`;
+      }).join('')}
+    </div>`;
+  }).join('');
 }
 
-function submitNew(){
-  const el=document.getElementById('newTitle');if(!el)return;
-  const title=el.value.trim();if(!title)return;
-  const importance=+document.getElementById('newImp').value||3;
-  const effort=document.getElementById('newEffort').value||'S';
-  const type=document.getElementById('newType').value||'small';
-  addTask(title,importance,effort,type);
-  el.value='';el.focus();
+function renderReports(){
+  const btn = `<button class="primary report-btn" onclick="askForReport()">📊 Составить отчёт за прошедшую неделю</button>`;
+  if(!state.reports || !state.reports.length){
+    return btn + '<div class="empty">Отчётов пока нет. Нажми кнопку — ассистент посчитает.</div>';
+  }
+  return btn + state.reports.slice().reverse().map(r=>{
+    const cls = r.score>=7?'good':r.score>=4?'mid':'bad';
+    return `<div class="report">
+      <div class="report-head">
+        <span>${esc(r.weekStart)} – ${esc(r.weekEnd)}</span>
+        <span class="score ${cls}">${r.score}/10</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">Сделано ${r.done} из ${r.planned} задач (${Math.round(r.done/Math.max(1,r.planned)*100)}%)</div>
+      ${r.summary?`<div class="summary">${esc(r.summary)}</div>`:''}
+    </div>`;
+  }).join('');
 }
 
-function render(){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===state.tab));
-  const c=document.getElementById('content');
-  if(state.tab==='today')c.innerHTML=renderToday();
-  else if(state.tab==='week')c.innerHTML=renderWeek();
-  else if(state.tab==='pool')c.innerHTML=renderPool();
-  else c.innerHTML=renderRoutines();
-  const el=document.getElementById('newTitle');
-  if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter')submitNew()});
+function renderChat(){
+  const el = document.getElementById('chat');
+  if(!state.messages.length){
+    el.innerHTML = '<div class="empty">Привет! Опиши цели так, как они у тебя в голове. Например:<br><br>"Сегодня 16 октября. К новому году хочу: 1) бизнес приносит 70к/мес (сейчас 25к), 2) пройти диспансеризацию, 3) сделать ремонт в спальне. Раскидай по неделям."</div>';
+    return;
+  }
+  el.innerHTML = state.messages.map(m=>{
+    const text = m.content.replace(/```json[\s\S]*?```/g,'').trim();
+    return `<div class="msg ${m.role}"><div class="role">${m.role==='user'?'ты':'ассистент'}</div>${esc(text)}</div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function showThinking(on){
+  const el = document.getElementById('chat');
+  if(on) el.innerHTML += '<div class="msg"><div class="role">ассистент</div>…думает</div>';
+  else renderChat();
 }
 
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click',()=>{state.tab=tab.dataset.tab;save();render()});
+// ====== ACTIONS ======
+function toggleTask(goalId, taskId){
+  const g = state.goals.find(x=>x.id===goalId);
+  if(!g) return;
+  const t = (g.tasks||[]).find(x=>x.id===taskId);
+  if(t){ t.done = !t.done; save(); render(); }
+}
+function deleteGoal(gi){
+  if(!confirm('Удалить цель со всеми задачами?')) return;
+  state.goals.splice(gi,1); save(); render();
+}
+function askForReport(){
+  document.getElementById('userInput').value = 'Составь отчёт за прошедшую неделю: сколько задач было запланировано, сколько сделано, оцени меня по 10-балльной шкале и скажи, что подтянуть.';
+  send();
+}
+
+// ====== AI ======
+function buildSystemPrompt(){
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+  return `Ты — персональный планировщик. Сегодня ${todayStr} (${todayISO()}).
+
+ЗАДАЧА: помогать пользователю достичь нескольких целей к дедлайнам. Ты сам раскладываешь работу по неделям и сам корректируешь план, когда появляются новые обстоятельства.
+
+ПРАВИЛА:
+1. НЕ заваливай анкетой. Если пользователь дал цели — сразу строй план. Уточняющие вопросы задавай по 1-2, только если без них план будет фантазией.
+2. На каждую цель — 5-15 конкретных задач. Формулируй так, чтобы было понятно, что делать ("позвонить в поликлинику и записаться к терапевту", а не "заняться здоровьем").
+3. Оценивай каждую задачу:
+   - effort: S (до 2ч), M (до 6ч), L (до 20ч, требует нескольких подходов)
+   - impact: 1-5, насколько задача приближает к цели
+4. Раскидывай по неделям. week=0 — текущая неделя, week=1 — следующая, и т.д.
+   - Нагрузка: не больше 12-15 часов в неделю на всё.
+   - В неделю от дедлайна отсчитывай так, чтобы всё успело закрыться с запасом 1-2 недели.
+   - Задачи с высоким impact — раньше. Задачи с L-effort — в начало недели, чтобы был запас.
+5. Когда пользователь сообщает о новых обстоятельствах ("появился новый врач", "сдвинулся дедлайн") — пересобери план: вставь новые задачи, сдвинь менее важные на следующие недели, но не раздувай нагрузку.
+6. Когда пользователь отмечает задачу галочкой — не надо пересобирать план, просто коротко ответь.
+7. Отчёт за неделю: считаешь задачи у которых week = прошедшая неделя. done — сделано, planned — всего. score = round(done/planned * 10). В summary: 2-3 предложения — где просел, что подтянуть. Добавляй отчёт в массив reports.
+8. Будь краток. Максимум 4-5 предложений обычного текста. Ты не лектор.
+
+ФОРМАТ ОТВЕТА:
+- Сначала обычный текст: что сделал (2-4 предложения).
+- Затем В КОНЦЕ блок:
+\`\`\`json
+{"goals": [...], "reports": [...]}
+\`\`\`
+Это ПОЛНОЕ состояние, а не патч. Если goals/reports не менялись — не добавляй JSON вообще.
+
+СТРУКТУРА JSON:
+{
+  "goals": [
+    {"id":"g1","title":"Бизнес 70к/мес","deadline":"2026-12-31","created":"2026-10-16",
+     "tasks":[
+       {"id":"t1","title":"...","effort":"S","impact":4,"week":0,"done":false}
+     ]}
+  ],
+  "reports": [
+    {"weekStart":"2026-10-14","weekEnd":"2026-10-20","score":7,"done":5,"planned":8,"summary":"..."}
+  ]
+}
+
+ТЕКУЩЕЕ СОСТОЯНИЕ:
+${JSON.stringify({goals: state.goals, reports: state.reports})}`;
+}
+
+async function callAI(){
+  const url = ENDPOINTS[state.provider];
+  const headers = {'Content-Type':'application/json','Authorization':'Bearer '+state.apiKey};
+  if(state.provider==='openrouter'){ headers['HTTP-Referer']='https://github.com'; headers['X-Title']='Goal Planner'; }
+  const body = {
+    model: state.model,
+    messages: [{role:'system', content: buildSystemPrompt()}, ...state.messages.slice(-20)]
+  };
+  const res = await fetch(url, {method:'POST', headers, body: JSON.stringify(body)});
+  if(!res.ok){ const t = await res.text(); throw new Error('API '+res.status+': '+t.slice(0,300)); }
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
+function parseJSONBlock(text){
+  const m = text.match(/```json\s*([\s\S]*?)```/);
+  if(!m) return null;
+  try { return JSON.parse(m[1]); }
+  catch(e){
+    try { return JSON.parse(m[1].replace(/,(\s*[}\]])/g,'$1')); }
+    catch(e2){ return null; }
+  }
+}
+
+async function send(){
+  if(!state.apiKey){ alert('Вставь API-ключ в настройках сверху слева'); return; }
+  const ta = document.getElementById('userInput');
+  const txt = ta.value.trim();
+  if(!txt) return;
+  ta.value = '';
+  state.messages.push({role:'user', content: txt});
+  save(); render(); showThinking(true);
+  try {
+    const reply = await callAI();
+    state.messages.push({role:'assistant', content: reply});
+    const parsed = parseJSONBlock(reply);
+    if(parsed){
+      if(parsed.goals) state.goals = parsed.goals;
+      if(parsed.reports) state.reports = parsed.reports;
+    }
+    save(); render();
+  } catch(e){
+    state.messages.push({role:'assistant', content:'⚠️ Ошибка: '+e.message});
+    save(); render();
+  } finally {
+    showThinking(false);
+  }
+}
+
+// ====== SETTINGS ======
+function bindSettings(){
+  const k = document.getElementById('apiKey');
+  const p = document.getElementById('provider');
+  const m = document.getElementById('model');
+  k.value = state.apiKey;
+  p.value = state.provider;
+  function fillModels(){
+    if(!MODELS[state.provider].includes(state.model)) state.model = MODELS[state.provider][0];
+    m.innerHTML = MODELS[state.provider].map(x=>`<option ${state.model===x?'selected':''}>${x}</option>`).join('');
+  }
+  fillModels();
+  k.oninput = ()=>{ state.apiKey = k.value.trim(); save(); };
+  p.onchange = ()=>{ state.provider = p.value; state.model = MODELS[p.value][0]; save(); fillModels(); };
+  m.onchange = ()=>{ state.model = m.value; save(); };
+}
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{ state.tab = t.dataset.tab; save(); render(); };
 });
+document.addEventListener('keydown', e=>{
+  if(e.ctrlKey && e.key==='Enter' && document.activeElement.id==='userInput'){ e.preventDefault(); send(); }
+});
+
+bindSettings();
 render();
 </script>
 </body>
