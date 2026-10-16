@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Планировщик задач</title>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--text:#e6e8ee;--muted:#8b93a7;--accent:#7c9cff;--warn:#fbbf24;--border:#262b36}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.4}
+.wrap{max-width:1200px;margin:0 auto;padding:20px}
+h1{font-size:20px;margin:0 0 20px;font-weight:600}
+h2{font-size:13px;margin:0 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.tab{padding:10px 16px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.form{display:grid;grid-template-columns:1fr auto auto auto auto;gap:8px}
+input,select,button{font-family:inherit;font-size:14px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+button{cursor:pointer}
+button.primary{background:var(--accent);color:#0f1115;border-color:var(--accent);font-weight:600}
+.task{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2);border-radius:6px;margin-bottom:6px;border-left:3px solid transparent}
+.task.big{border-left-color:var(--accent)}
+.task.routine{border-left-color:var(--warn)}
+.task.done{opacity:.4;text-decoration:line-through}
+.task .title{flex:1}
+.task .meta{color:var(--muted);font-size:12px;display:flex;gap:6px;flex-wrap:wrap}
+.badge{padding:2px 6px;background:var(--panel);border-radius:4px;font-size:11px}
+.badge.score{background:#2a3a5c;color:#a8c0ff}
+.badge.imp{background:#3d2a3a;color:#f0a0d0}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.day{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px;min-height:200px}
+.day.today{border-color:var(--accent)}
+.day h3{font-size:12px;margin:0 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase}
+.day .task{padding:6px 8px;font-size:13px;margin-bottom:4px}
+.icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 6px;font-size:13px;border-radius:4px}
+.icon-btn:hover{color:var(--text);background:var(--panel)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.empty{color:var(--muted);font-style:italic;padding:10px 0;font-size:13px}
+.stat{color:var(--muted);font-size:12px}
+@media(max-width:800px){.week{grid-template-columns:1fr 1fr}.form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📋 Планировщик задач</h1>
+  <div class="tabs">
+    <button class="tab" data-tab="today">Сегодня</button>
+    <button class="tab active" data-tab="week">Неделя</button>
+    <button class="tab" data-tab="pool">Все задачи</button>
+    <button class="tab" data-tab="routines">Рутины</button>
+  </div>
+  <div id="content"></div>
+</div>
+<script>
+const DAYS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const EFFORT_LABEL={S:'15м',M:'1ч',L:'3ч+'};
+let state=load()||{tasks:[],tab:'week'};
+
+function load(){try{return JSON.parse(localStorage.getItem('planner_v1'))}catch(e){return null}}
+function save(){localStorage.setItem('planner_v1',JSON.stringify(state))}
+function uid(){return Math.random().toString(36).slice(2,10)}
+function todayIdx(){const d=new Date().getDay();return d===0?6:d-1}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+function score(t){
+  const ageDays=Math.floor((Date.now()-t.created)/86400000);
+  const aging=ageDays+t.postponed*2;
+  const typeBonus=t.type==='big'?6:0;
+  const effortPen=t.effort==='L'?2:t.effort==='M'?1:0;
+  return Math.max(0,t.importance*3+aging+typeBonus-effortPen);
+}
+
+function addTask(title,importance,effort,type){
+  state.tasks.push({id:uid(),title,importance,effort,type,created:Date.now(),postponed:0,done:false,day:null,lastDoneDate:null});
+  save();render();
+}
+function deleteTask(id){state.tasks=state.tasks.filter(t=>t.id!==id);save();render()}
+function toggleDone(id){
+  const t=state.tasks.find(x=>x.id===id);if(!t)return;
+  if(t.type==='routine'){t.lastDoneDate=t.lastDoneDate===todayStr()?null:todayStr()}
+  else{t.done=!t.done;if(t.done)t.day=null}
+  save();render();
+}
+function postpone(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;t.postponed++;t.day=null;save();render()}
+function assignDay(id,day){const t=state.tasks.find(x=>x.id===id);if(!t)return;t.day=day;save();render()}
+function unassign(id){const t=state.tasks.find(x=>x.id===id);if(t){t.day=null;save();render()}}
+
+function autoPlan(){
+  const pool=state.tasks.filter(t=>!t.done&&t.type!=='routine'&&t.day===null);
+  pool.sort((a,b)=>score(b)-score(a));
+  const load=[0,0,0,0,0,0,0],bigPerDay=[0,0,0,0,0,0,0];
+  state.tasks.forEach(t=>{if(t.day!==null&&!t.done){load[t.day]++;if(t.type==='big')bigPerDay[t.day]++}});
+  for(const t of pool){
+    if(t.type!=='big')continue;
+    for(const d of [0,1,2,3,4,5,6]){
+      if(bigPerDay[d]===0&&load[d]<4){t.day=d;load[d]++;bigPerDay[d]++;break}
+    }
+  }
+  for(const t of pool){
+    if(t.day!==null)continue;
+    const order=[0,1,2,3,4,5,6].sort((a,b)=>load[a]-load[b]||a-b);
+    for(const d of order){if(load[d]<4){t.day=d;load[d]++;break}}
+  }
+  save();render();
+}
+function clearPlan(){state.tasks.forEach(t=>{if(!t.done)t.day=null});save();render()}
+
+function taskHtmlToday(t){
+  return `<div class="task ${t.type}">
+    <input type="checkbox" onchange="toggleDone('${t.id}')">
+    <span class="title">${esc(t.title)}</span>
+    <span class="meta">
+      <span class="badge imp">★${t.importance}</span>
+      <span class="badge">${EFFORT_LABEL[t.effort]}</span>
+      <span class="badge score">${Math.round(score(t))}</span>
+    </span>
+    <button class="icon-btn" onclick="postpone('${t.id}')" title="Отложить">⏭</button>
+  </div>`;
+}
+function taskHtmlRoutine(t){
+  const done=t.lastDoneDate===todayStr();
+  return `<div class="task routine ${done?'done':''}">
+    <input type="checkbox" ${done?'checked':''} onchange="toggleDone('${t.id}')">
+    <span class="title">${esc(t.title)}</span>
+    <button class="icon-btn" onclick="deleteTask('${t.id}')">🗑</button>
+  </div>`;
+}
+function taskHtmlInDay(t){
+  return `<div class="task ${t.type}">
+    <span class="title">${esc(t.title)}</span>
+    <button class="icon-btn" onclick="unassign('${t.id}')" title="Снять">✕</button>
+  </div>`;
+}
+function taskHtmlPool(t){
+  const dayOpts=DAYS.map((n,i)=>`<option value="${i}" ${t.day===i?'selected':''}>${n}</option>`).join('');
+  return `<div class="task ${t.type}">
+    <span class="title">${esc(t.title)}</span>
+    <span class="meta">
+      <span class="badge imp">★${t.importance}</span>
+      <span class="badge">${EFFORT_LABEL[t.effort]}</span>
+      <span class="badge score">${Math.round(score(t))}</span>
+      ${t.postponed?`<span class="badge">отложено ${t.postponed}×</span>`:''}
+    </span>
+    <select onchange="assignDay('${t.id}',this.value===''?null:+this.value)">
+      <option value="" ${t.day===null?'selected':''}>— день —</option>
+      ${dayOpts}
+    </select>
+    <button class="icon-btn" onclick="postpone('${t.id}')" title="Отложить">⏭</button>
+    <button class="icon-btn" onclick="deleteTask('${t.id}')">🗑</button>
+  </div>`;
+}
+
+function renderToday(){
+  const d=todayIdx();
+  const important=state.tasks.filter(t=>t.day===d&&!t.done&&t.type!=='routine').sort((a,b)=>score(b)-score(a));
+  const routines=state.tasks.filter(t=>t.type==='routine');
+  return `<div class="panel">
+    <h2>Важное на сегодня · ${DAYS[d]}</h2>
+    ${important.length?important.map(taskHtmlToday).join(''):'<div class="empty">Ничего не запланировано. Открой «Неделю» и нажми «Авто-план».</div>'}
+  </div>
+  <div class="panel">
+    <h2>Рутины</h2>
+    ${routines.length?routines.map(taskHtmlRoutine).join(''):'<div class="empty">Рутин нет. Добавь во вкладке «Рутины».</div>'}
+  </div>`;
+}
+function renderWeek(){
+  const tIdx=todayIdx();
+  const days=[0,1,2,3,4,5,6].map(d=>{
+    const tasks=state.tasks.filter(t=>t.day===d&&!t.done&&t.type!=='routine').sort((a,b)=>score(b)-score(a));
+    return `<div class="day ${d===tIdx?'today':''}">
+      <h3>${DAYS[d]}${d===tIdx?' · сегодня':''}</h3>
+      ${tasks.length?tasks.map(taskHtmlInDay).join(''):'<div class="empty" style="font-size:12px">—</div>'}
+    </div>`;
+  }).join('');
+  return `<div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <span class="stat">Максимум 1 важное дело и 4 задачи в день. Пн–Пт в приоритете.</span>
+      <div class="row">
+        <button class="primary" onclick="autoPlan()">⚡ Авто-план</button>
+        <button onclick="clearPlan()">Очистить план</button>
+      </div>
+    </div>
+  </div>
+  <div class="week">${days}</div>`;
+}
+function renderPool(){
+  const pool=state.tasks.filter(t=>!t.done&&t.type!=='routine').sort((a,b)=>score(b)-score(a));
+  const done=state.tasks.filter(t=>t.done).length;
+  return `<div class="panel">
+    <h2>Добавить задачу</h2>
+    <div class="form">
+      <input id="newTitle" placeholder="Что нужно сделать?">
+      <select id="newImp">
+        <option value="1">★1</option><option value="2">★2</option>
+        <option value="3" selected>★3</option><option value="4">★4</option><option value="5">★5</option>
+      </select>
+      <select id="newEffort">
+        <option value="S">15 мин</option><option value="M" selected>1 час</option><option value="L">3 часа+</option>
+      </select>
+      <select id="newType">
+        <option value="big">Важное</option><option value="small" selected>Мелкое</option><option value="routine">Рутина</option>
+      </select>
+      <button class="primary" onclick="submitNew()">Добавить</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <h2 style="margin:0">Очередь · ${pool.length} активных · ${done} выполнено</h2>
+      <button class="primary" onclick="autoPlan()">⚡ Распределить на неделю</button>
+    </div>
+    ${pool.length?pool.map(taskHtmlPool).join(''):'<div class="empty">Список пуст. Добавь первую задачу выше.</div>'}
+  </div>`;
+}
+function renderRoutines(){
+  const routines=state.tasks.filter(t=>t.type==='routine');
+  return `<div class="panel">
+    <h2>Добавить рутину</h2>
+    <div class="form" style="grid-template-columns:1fr auto">
+      <input id="newTitle" placeholder="Например: зарядка, дневник, чтение">
+      <input type="hidden" id="newImp" value="3">
+      <input type="hidden" id="newEffort" value="S">
+      <input type="hidden" id="newType" value="routine">
+      <button class="primary" onclick="submitNew()">Добавить</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Рутины (${routines.length})</h2>
+    ${routines.length?routines.map(taskHtmlRoutine).join(''):'<div class="empty">Добавь привычки — они не занимают слоты важного.</div>'}
+  </div>`;
+}
+
+function submitNew(){
+  const el=document.getElementById('newTitle');if(!el)return;
+  const title=el.value.trim();if(!title)return;
+  const importance=+document.getElementById('newImp').value||3;
+  const effort=document.getElementById('newEffort').value||'S';
+  const type=document.getElementById('newType').value||'small';
+  addTask(title,importance,effort,type);
+  el.value='';el.focus();
+}
+
+function render(){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===state.tab));
+  const c=document.getElementById('content');
+  if(state.tab==='today')c.innerHTML=renderToday();
+  else if(state.tab==='week')c.innerHTML=renderWeek();
+  else if(state.tab==='pool')c.innerHTML=renderPool();
+  else c.innerHTML=renderRoutines();
+  const el=document.getElementById('newTitle');
+  if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter')submitNew()});
+}
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{state.tab=tab.dataset.tab;save();render()});
+});
+render();
+</script>
+</body>
+</html>
